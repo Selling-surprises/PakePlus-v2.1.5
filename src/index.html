@@ -1,32 +1,1543 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="styles.css" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus App</title>
-        <script type="module" src="/main.js" defer></script>
-    </head>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICO图标生成器</title>
+    <link rel="icon" type="image/favicon.png">
+    <link rel="stylesheet" href="css/all.min.css">
+    <script src="js/jszip.min.js"></script>
+    <script src="js/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #e7ebff;
+            --secondary: #7209b7;
+            --secondary-light: #f5e9ff;
+            --dark: #1a1c28;
+            --light: #ffffff;
+            --light-gray: #f8f9fa;
+            --medium-gray: #e9ecef;
+            --text: #343a40;
+            --text-light: #6c757d;
+            --success: #4cc9f0;
+            --success-light: #e1f7ff;
+            --warning: #f72585;
+            --border-radius: 16px;
+            --shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            --card-bg: #ffffff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: var(--light-gray);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 0 30px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            display: inline-block;
+        }
+        
+        h1:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 2px;
+        }
+        
+        .subtitle {
+            color: var(--text-light);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 20px auto 30px;
+            line-height: 1.7;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--medium-gray);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .settings-section {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .preview-section {
+            flex: 100%;
+            min-width: 300px;
+            margin-top: 10px;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+        }
+        
+        .section-title i {
+            font-size: 1.8rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 50%;
+            color: var(--primary);
+        }
+        
+        .drop-area {
+            border: 3px dashed var(--primary);
+            border-radius: var(--border-radius);
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            background: rgba(67, 97, 238, 0.05);
+        }
+        
+        .drop-area:hover, .drop-area.dragover {
+            background: rgba(67, 97, 238, 0.1);
+            border-color: var(--secondary);
+        }
+        
+        .drop-area i {
+            font-size: 3.5rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .drop-area:hover i {
+            transform: translateY(-5px);
+        }
+        
+        .drop-area h3 {
+            margin-bottom: 12px;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        
+        .drop-area p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05rem;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        
+        .btn:hover:before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn i {
+            font-size: 1.2rem;
+        }
+        
+        .btn-generate {
+            background: linear-gradient(135deg, var(--secondary), #5e0b9b);
+            width: 100%;
+            justify-content: center;
+            padding: 16px;
+            font-size: 1.1rem;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(114, 9, 183, 0.2);
+        }
+        
+        .btn-generate:hover {
+            box-shadow: 0 6px 20px rgba(114, 9, 183, 0.3);
+        }
+        
+        .resolution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .resolution-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--light-gray);
+            padding: 18px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .resolution-item:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .resolution-item:hover:before {
+            transform: translateY(0);
+        }
+        
+        .resolution-item:hover {
+            background: var(--primary-light);
+            transform: translateY(-3px);
+        }
+        
+        .resolution-item.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            box-shadow: 0 0 15px rgba(67, 97, 238, 0.15);
+        }
+        
+        .resolution-item.selected:before {
+            transform: translateY(0);
+            background: var(--primary);
+        }
+        
+        .resolution-size {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--text);
+        }
+        
+        .resolution-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .preview-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--light-gray);
+            padding: 20px 15px;
+            border-radius: 12px;
+            min-width: 110px;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .preview-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            background: var(--primary-light);
+        }
+        
+        .preview-icon {
+            width: 90px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid var(--medium-gray);
+        }
+        
+        .preview-icon img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .preview-size {
+            font-size: 1rem;
+            color: var(--primary);
+            font-weight: 600;
+            background: rgba(67, 97, 238, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        
+        .instructions {
+            background: rgba(67, 97, 238, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            margin: 25px 0;
+        }
+        
+        .instructions h4 {
+            margin-bottom: 12px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: var(--text);
+            position: relative;
+            padding-left: 10px;
+        }
+        
+        .instructions li:before {
+            content: '•';
+            color: var(--primary);
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            border-top: 1px solid var(--medium-gray);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .spinner {
+            width: 70px;
+            height: 70px;
+            border: 6px solid rgba(67, 97, 238, 0.1);
+            border-top: 6px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1.3rem;
+            color: var(--text);
+            text-align: center;
+            max-width: 300px;
+            line-height: 1.7;
+        }
+        
+        .loading-text i {
+            color: var(--primary);
+            margin-right: 10px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            padding: 18px 30px;
+            border-radius: 12px;
+            background: white;
+            color: var(--text);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-left: 5px solid var(--primary);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            border-left-color: var(--warning);
+        }
+        
+        .notification.success {
+            border-left-color: var(--success);
+        }
+        
+        .notification i {
+            font-size: 1.8rem;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .section-title {
+                font-size: 1.3rem;
+            }
+            
+            .drop-area {
+                padding: 30px 15px;
+            }
+            
+            .drop-area h3 {
+                font-size: 1.3rem;
+            }
+            
+            .resolution-grid {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            }
+        }
+        
+        .image-preview {
+            margin-top: 25px;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid var(--medium-gray);
+        }
+        
+        .preview-title {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .feature-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .filename-preview {
+            background: rgba(67, 97, 238, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+        
+        .filename-preview span {
+            color: var(--primary);
+            font-weight: bold;
+            word-break: break-all;
+        }
+        
+        .resolution-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .resolution-count {
+            background: var(--primary);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .upload-history {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .history-title {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .history-container {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        
+        .history-item {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+        
+        .history-item:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+        
+        .history-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .history-item.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .history-item .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--warning);
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .history-item:hover .delete-btn {
+            opacity: 1;
+        }
+        
+        /* 选择模式控制 */
+        .selection-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .mode-btn {
+            background: var(--light-gray);
+            border: 2px solid var(--medium-gray);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .mode-btn.active {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .mode-btn:hover {
+            background: var(--medium-gray);
+        }
+        
+        .resolution-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .action-btn {
+            background: var(--light-gray);
+            border: 2px solid var(--medium-gray);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        
+        .action-btn:hover {
+            background: var(--medium-gray);
+        }
+        
+        .preset-badge {
+            background: var(--secondary-light);
+            color: var(--secondary);
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .resolution-info h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-tooltip {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            cursor: help;
+        }
+        
+        /* 新增样式：下载按钮优化 */
+        .download-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .download-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .download-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        
+        .download-btn:hover:before {
+            left: 100%;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .download-btn i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .btn-zip {
+            background: linear-gradient(135deg, #f72585, #d00069);
+        }
+        
+        .btn-zip:hover {
+            box-shadow: 0 6px 20px rgba(247, 37, 133, 0.3);
+        }
+        
+        .btn-all {
+            background: linear-gradient(135deg, var(--secondary), #5e0b9b);
+        }
+        
+        .btn-all:hover {
+            box-shadow: 0 6px 20px rgba(114, 9, 183, 0.3);
+        }
+        
+        .download-info {
+            background: var(--success-light);
+            color: var(--text);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid var(--success);
+        }
+        
+        .download-info i {
+            color: var(--success);
+            font-size: 1.4rem;
+        }
+        
+        .download-info p {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-icons"></i> ICO图标生成器</h1>
+            <p class="subtitle">上传PNG图片，选择多种分辨率，生成专业ICO图标文件<span class="feature-badge">支持多格式下载</span></p>
+        </header>
+        
+        <div class="app-container">
+            <div class="card upload-section">
+                <h2 class="section-title"><i class="fas fa-cloud-upload-alt"></i> 上传图片</h2>
+                <div class="drop-area" id="drop-area">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>拖放PNG图片到此处</h3>
+                    <p>或点击选择文件</p>
+                    <p style="font-size: 0.85rem; margin-top: 15px; color: #6c757d;">支持透明背景的PNG格式</p>
+                </div>
+                <input type="file" id="file-input" class="file-input" accept="image/png">
+                <button class="btn" id="select-file-btn">
+                    <i class="fas fa-folder-open"></i> 选择图片
+                </button>
+                
+                <div class="image-preview" id="image-preview">
+                    <img id="preview-image" class="preview-image" src="" alt="图片预览">
+                    <div class="preview-title"><i class="fas fa-check-circle"></i> 图片已成功加载</div>
+                </div>
+                
+                <div class="filename-preview" id="filename-preview">
+                    输出文件名: <span id="output-filename">未设置</span>
+                </div>
+                
+                <div class="upload-history" id="upload-history">
+                    <div class="history-title"><i class="fas fa-history"></i> 最近上传</div>
+                    <div class="history-container" id="history-container">
+                        <!-- 上传历史会通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card settings-section">
+                <h2 class="section-title"><i class="fas fa-cog"></i> 图标设置</h2>
+                
+                <div class="selection-controls">
+                    <div class="mode-btn active" id="multi-select-btn">
+                        <i class="fas fa-check-square"></i> 多分辨率模式
+                    </div>
+                    <div class="mode-btn" id="single-select-btn">
+                        <i class="fas fa-check-circle"></i> 单分辨率模式
+                    </div>
+                </div>
+                
+                <div class="resolution-actions">
+                    <button class="action-btn" id="select-all-btn">
+                        <i class="fas fa-check-double"></i> 全选
+                    </button>
+                    <button class="action-btn" id="clear-all-btn">
+                        <i class="fas fa-times"></i> 清除
+                    </button>
+                    <button class="action-btn" id="default-btn">
+                        <i class="fas fa-history"></i> 默认选择
+                    </button>
+                </div>
+                
+                <div class="resolution-info">
+                    <h3 style="color: var(--text); font-size: 1.1rem;">
+                        选择分辨率 
+                        <div class="info-tooltip" title="在单选模式下，可选择多个分辨率生成单独图标">?</div>
+                    </h3>
+                    <div class="resolution-count" id="resolution-count">已选: 7项</div>
+                </div>
+                
+                <div class="resolution-grid" id="resolution-grid">
+                    <!-- 分辨率选项会通过JS动态生成 -->
+                </div>
+                
+                <div class="instructions">
+                    <h4><i class="fas fa-lightbulb"></i> 生成说明</h4>
+                    <ul>
+                        <li>默认生成32位色深图标（1670万色 + Alpha透明通道）</li>
+                        <li>多分辨率模式：生成单个ICO文件（包含所有选中分辨率）</li>
+                        <li>单分辨率模式：为每个分辨率生成单独ICO文件（支持打包下载）</li>
+                        <li>256×256分辨率适合Windows任务栏大图标<span class="preset-badge">推荐</span></li>
+                        <li>所有处理均在浏览器中完成，不上传服务器</li>
+                    </ul>
+                </div>
+                
+                <button class="btn btn-generate" id="generate-btn" disabled>
+                    <i class="fas fa-download"></i> 生成ICO图标
+                </button>
+                
+                <div class="download-options" id="download-options" style="display: none;">
+                    <button class="download-btn btn-zip" id="download-zip-btn">
+                        <i class="fas fa-file-archive"></i> 下载ZIP包
+                    </button>
+                    <button class="download-btn btn-all" id="download-all-btn">
+                        <i class="fas fa-download"></i> 全部下载
+                    </button>
+                </div>
+                
+                <div class="download-info" id="download-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <p>已生成ICO图标，请选择下载方式</p>
+                </div>
+            </div>
+            
+            <div class="card preview-section">
+                <h2 class="section-title"><i class="fas fa-eye"></i> 图标预览</h2>
+                <p id="preview-message" style="color: var(--text-light); text-align: center; padding: 10px;">上传图片并选择分辨率后，此处将显示不同尺寸的预览效果</p>
+                <div class="preview-container" id="preview-container">
+                    <!-- 预览内容会通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p><i class="fas fa-copyright"></i> 2025 ICO图标生成器 | 支持PNG转ICO | 多分辨率图标生成</p>
+            <p style="margin-top: 8px;">所有转换均在浏览器本地完成，您的图片不会上传到任何服务器</p>
+        </footer>
+    </div>
+    
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text"><i class="fas fa-cog fa-spin"></i> 正在生成图标，请稍候...</div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <i class="fas fa-info-circle"></i>
+        <span id="notification-text">通知内容</span>
+    </div>
+    
+    <script>
+        // 可用分辨率列表
+        const resolutions = [16, 24, 32, 48, 64, 72, 96, 128, 256];
+        // 默认选中的分辨率
+        const defaultResolutions = [32, 48, 64, 72, 96, 128, 256];
+        let selectedResolutions = [...defaultResolutions];
+        let uploadedImage = null;
+        let uploadedFileName = "icon"; // 默认文件名
+        let imageHistory = []; // 上传历史记录
+        let isMultiSelect = true; // 默认为多选模式
+        let generatedIcons = []; // 存储生成的图标数据
 
-    <body>
-        <main class="container">
-            <h1>Welcome to PakePlus</h1>
-            <form class="row" id="greet-form">
-                <input id="inputValue" placeholder="Enter a something..." />
-            </form>
-            <div class="resultBox">
-                <span>result: </span>
-                <span id="result"></span>
-            </div>
-            <div class="invokeBox">
-                <button id="openUrl">open_url_browser</button>
-                <button id="openUrlNew">open_url_new</button>
-                <button id="runCommand">run_command</button>
-                <button id="downloadFile">download_file</button>
-                <button id="getExeDir">get_exe_dir</button>
-                <button id="getEnvVar">get_env_var</button>
-                <button id="findPort">find_port</button>
-            </div>
-        </main>
-    </body>
+        // 初始化分辨率选择器
+        function initResolutionGrid() {
+            const grid = document.getElementById('resolution-grid');
+            grid.innerHTML = '';
+            resolutions.forEach(res => {
+                const isSelected = defaultResolutions.includes(res);
+                const item = document.createElement('div');
+                item.className = `resolution-item ${isSelected ? 'selected' : ''}`;
+                item.innerHTML = `
+                    <div class="resolution-size">${res}×${res}</div>
+                    <div class="resolution-label">像素</div>
+                `;
+                item.addEventListener('click', () => {
+                    if (isMultiSelect) {
+                        item.classList.toggle('selected');
+                    } else {
+                        // 单选模式：允许多选
+                        item.classList.toggle('selected');
+                    }
+                    updateSelectedResolutions();
+                });
+                grid.appendChild(item);
+            });
+        }
+        
+        // 更新选中的分辨率
+        function updateSelectedResolutions() {
+            selectedResolutions = [];
+            document.querySelectorAll('.resolution-item').forEach((item, index) => {
+                if (item.classList.contains('selected')) {
+                    selectedResolutions.push(resolutions[index]);
+                }
+            });
+            
+            // 更新分辨率计数
+            const count = selectedResolutions.length;
+            document.getElementById('resolution-count').textContent = `已选: ${count}项`;
+            
+            updatePreview();
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notification-text');
+            
+            notification.className = `notification ${type}`;
+            text.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3500);
+        }
+        
+        // 显示加载状态
+        function showLoading(show) {
+            const overlay = document.getElementById('loading-overlay');
+            if (show) {
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.remove('active');
+            }
+        }
+        
+        // 初始化事件监听器
+        function initEventListeners() {
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('file-input');
+            const selectFileBtn = document.getElementById('select-file-btn');
+            const generateBtn = document.getElementById('generate-btn');
+            const downloadZipBtn = document.getElementById('download-zip-btn');
+            const downloadAllBtn = document.getElementById('download-all-btn');
+            
+            // 选择文件按钮
+            selectFileBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // 文件输入变化
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+            
+            // 拖放事件
+            dropArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropArea.classList.add('dragover');
+            });
+            
+            dropArea.addEventListener('dragleave', () => {
+                dropArea.classList.remove('dragover');
+            });
+            
+            dropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleFileUpload(e.dataTransfer.files[0]);
+                }
+            });
+            
+            // 点击拖放区域
+            dropArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // 生成按钮
+            generateBtn.addEventListener('click', generateIco);
+            
+            // ZIP下载按钮
+            downloadZipBtn.addEventListener('click', downloadAsZip);
+            
+            // 全部下载按钮
+            downloadAllBtn.addEventListener('click', downloadAllIcons);
+            
+            // 选择模式按钮
+            document.getElementById('multi-select-btn').addEventListener('click', () => {
+                setSelectionMode(true);
+            });
+            
+            document.getElementById('single-select-btn').addEventListener('click', () => {
+                setSelectionMode(false);
+            });
+            
+            // 分辨率操作按钮
+            document.getElementById('select-all-btn').addEventListener('click', () => {
+                document.querySelectorAll('.resolution-item').forEach(item => {
+                    item.classList.add('selected');
+                });
+                updateSelectedResolutions();
+            });
+            
+            document.getElementById('clear-all-btn').addEventListener('click', () => {
+                document.querySelectorAll('.resolution-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                updateSelectedResolutions();
+            });
+            
+            document.getElementById('default-btn').addEventListener('click', () => {
+                document.querySelectorAll('.resolution-item').forEach((item, index) => {
+                    if (defaultResolutions.includes(resolutions[index])) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+                updateSelectedResolutions();
+            });
+        }
+        
+        // 设置选择模式
+        function setSelectionMode(multiSelect) {
+            isMultiSelect = multiSelect;
+            
+            // 更新UI状态
+            const multiBtn = document.getElementById('multi-select-btn');
+            const singleBtn = document.getElementById('single-select-btn');
+            const downloadOptions = document.getElementById('download-options');
+            const downloadInfo = document.getElementById('download-info');
+            
+            if (multiSelect) {
+                multiBtn.classList.add('active');
+                singleBtn.classList.remove('active');
+            } else {
+                multiBtn.classList.remove('active');
+                singleBtn.classList.add('active');
+            }
+            
+            // 隐藏下载选项
+            downloadOptions.style.display = 'none';
+            downloadInfo.style.display = 'none';
+            
+            showNotification(`已切换到${multiSelect ? '多选' : '单选'}模式`);
+            updatePreview();
+        }
+        
+        // 处理文件上传
+        function handleFileUpload(file) {
+            if (!file.type.match('image/png')) {
+                showNotification('请上传PNG格式的图片', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imageData = e.target.result;
+                
+                // 保存到历史记录（最多5个）
+                if (imageHistory.length >= 5) {
+                    imageHistory.pop();
+                }
+                imageHistory.unshift({data: imageData, name: file.name});
+                updateHistoryView();
+                
+                // 设置为当前上传的图片
+                setCurrentImage(imageData, file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 设置当前图片
+        function setCurrentImage(imageData, fileName) {
+            uploadedImage = imageData;
+            document.getElementById('image-preview').style.display = 'block';
+            document.getElementById('preview-image').src = uploadedImage;
+            document.getElementById('generate-btn').disabled = false;
+            
+            // 获取文件名（不含扩展名）
+            uploadedFileName = fileName.replace(/\.[^/.]+$/, "");
+            document.getElementById('output-filename').textContent = `${uploadedFileName}.ico`;
+            document.getElementById('filename-preview').style.display = 'block';
+            
+            // 隐藏下载选项
+            document.getElementById('download-options').style.display = 'none';
+            document.getElementById('download-info').style.display = 'none';
+            
+            showNotification('图片上传成功！请选择分辨率并生成图标');
+            updatePreview();
+        }
+        
+        // 更新历史记录视图
+        function updateHistoryView() {
+            const historyContainer = document.getElementById('history-container');
+            const historySection = document.getElementById('upload-history');
+            
+            if (imageHistory.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+            
+            historySection.style.display = 'block';
+            historyContainer.innerHTML = '';
+            
+            imageHistory.forEach((item, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                if (item.data === uploadedImage) {
+                    historyItem.classList.add('active');
+                }
+                historyItem.innerHTML = `
+                    <img src="${item.data}" alt="历史图片 ${index + 1}">
+                    <div class="delete-btn" title="删除记录"><i class="fas fa-times"></i></div>
+                `;
+                
+                // 点击历史记录项
+                historyItem.addEventListener('click', (e) => {
+                    if (!e.target.closest('.delete-btn')) {
+                        setCurrentImage(item.data, item.name);
+                    }
+                });
+                
+                // 删除按钮
+                const deleteBtn = historyItem.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    imageHistory.splice(index, 1);
+                    updateHistoryView();
+                });
+                
+                historyContainer.appendChild(historyItem);
+            });
+        }
+        
+        // 更新预览
+        function updatePreview() {
+            const previewContainer = document.getElementById('preview-container');
+            const previewMessage = document.getElementById('preview-message');
+            
+            if (!uploadedImage) {
+                previewContainer.innerHTML = '';
+                previewMessage.style.display = 'block';
+                return;
+            }
+            
+            previewMessage.style.display = 'none';
+            previewContainer.innerHTML = '';
+            
+            selectedResolutions.forEach(res => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                previewItem.innerHTML = `
+                    <div class="preview-icon">
+                        <img src="${uploadedImage}" style="width: ${res}px; height: ${res}px;">
+                    </div>
+                    <div class="preview-size">${res}×${res}</div>
+                `;
+                previewContainer.appendChild(previewItem);
+            });
+        }
+        
+        // 生成ICO文件
+        async function generateIco() {
+            if (!uploadedImage || selectedResolutions.length === 0) {
+                showNotification('请上传图片并选择至少一个分辨率', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            generatedIcons = []; // 重置存储的图标
+            
+            try {
+                // 创建画布用于处理图像
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 创建图片对象
+                const img = new Image();
+                img.src = uploadedImage;
+                
+                // 等待图片加载
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+                
+                if (isMultiSelect) {
+                    // 多选模式：生成单个ICO文件（包含所有分辨率）
+                    const blob = await generateIcoBlob(selectedResolutions, img, canvas, ctx);
+                    downloadBlob(blob, `${uploadedFileName}.ico`);
+                    showLoading(false);
+                    showNotification('ICO图标生成成功！已开始下载');
+                } else {
+                    // 单选模式：为每个分辨率生成单独的ICO文件
+                    // 生成所有ICO文件
+                    for (const size of selectedResolutions) {
+                        const blob = await generateIcoBlob([size], img, canvas, ctx);
+                        generatedIcons.push({
+                            size: size,
+                            blob: blob,
+                            filename: `${uploadedFileName}_${size}.ico`
+                        });
+                    }
+                    
+                    // 显示下载选项
+                    showLoading(false);
+                    document.getElementById('download-options').style.display = 'flex';
+                    document.getElementById('download-info').style.display = 'flex';
+                    
+                    showNotification(`已生成${selectedResolutions.length}个ICO文件`);
+                }
+            } catch (error) {
+                console.error('生成ICO时出错:', error);
+                showLoading(false);
+                showNotification(`生成ICO时出错: ${error.message}`, 'error');
+            }
+        }
+        
+        // 生成ICO Blob
+        async function generateIcoBlob(resolutions, img, canvas, ctx) {
+            // 创建ICO文件数据数组
+            const icoParts = [];
+            
+            // 创建ICO文件头
+            const header = new ArrayBuffer(6);
+            const headerView = new DataView(header);
+            headerView.setUint16(0, 0, true); // 保留位
+            headerView.setUint16(2, 1, true); // 类型 (1 = ICO)
+            headerView.setUint16(4, resolutions.length, true); // 图片数量
+            icoParts.push(header);
+            
+            // 创建目录项和图像数据
+            const directoryEntries = [];
+            const imageDataArray = [];
+            
+            let dataOffset = 6 + (16 * resolutions.length); // 头大小 + 所有目录项大小
+            
+            // 按分辨率从大到小排序
+            const sortedResolutions = [...resolutions].sort((a, b) => b - a);
+            
+            // 处理每个分辨率（按从大到小顺序）
+            for (const size of sortedResolutions) {
+                // 设置画布尺寸
+                canvas.width = size;
+                canvas.height = size;
+                
+                // 清除画布（透明背景）
+                ctx.clearRect(0, 0, size, size);
+                
+                // 计算缩放比例和位置
+                const scale = Math.min(size / img.width, size / img.height);
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                const offsetX = (size - scaledWidth) / 2;
+                const offsetY = (size - scaledHeight) / 2;
+                
+                // 绘制图像
+                ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+                
+                // 获取图像数据
+                const imageData = ctx.getImageData(0, 0, size, size);
+                
+                // 创建BMP信息头 (40字节)
+                const infoHeader = new ArrayBuffer(40);
+                const infoHeaderView = new DataView(infoHeader);
+                infoHeaderView.setUint32(0, 40, true); // Header size
+                infoHeaderView.setInt32(4, size, true); // Width
+                infoHeaderView.setInt32(8, size * 2, true); // Height (图像+掩码)
+                infoHeaderView.setUint16(12, 1, true); // Planes
+                infoHeaderView.setUint16(14, 32, true); // Bits per pixel (32位)
+                infoHeaderView.setUint32(16, 0, true); // Compression (none)
+                infoHeaderView.setUint32(20, size * size * 4, true); // Image size
+                infoHeaderView.setInt32(24, 0, true); // Horizontal resolution
+                infoHeaderView.setInt32(28, 0, true); // Vertical resolution
+                infoHeaderView.setUint32(32, 0, true); // Colors in palette
+                infoHeaderView.setUint32(36, 0, true); // Important colors
+                
+                // 创建像素数据 (BGRA格式)
+                const pixelData = new Uint8Array(size * size * 4);
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const srcIndex = (y * size + x) * 4;
+                        const destIndex = ((size - 1 - y) * size + x) * 4; // 翻转Y轴
+                        
+                        // 转换为BGRA格式
+                        pixelData[destIndex] = imageData.data[srcIndex + 2]; // B
+                        pixelData[destIndex + 1] = imageData.data[srcIndex + 1]; // G
+                        pixelData[destIndex + 2] = imageData.data[srcIndex]; // R
+                        pixelData[destIndex + 3] = imageData.data[srcIndex + 3]; // A
+                    }
+                }
+                
+                // 创建图像数据块 (信息头 + 像素数据)
+                const imageBlock = new Uint8Array(40 + pixelData.length);
+                imageBlock.set(new Uint8Array(infoHeader), 0);
+                imageBlock.set(pixelData, 40);
+                
+                // 创建目录项
+                const entry = new ArrayBuffer(16);
+                const entryView = new DataView(entry);
+                entryView.setUint8(0, size === 256 ? 0 : size); // Width
+                entryView.setUint8(1, size === 256 ? 0 : size); // Height
+                entryView.setUint8(2, 0); // Color count
+                entryView.setUint8(3, 0); // Reserved
+                entryView.setUint16(4, 1, true); // Color planes
+                entryView.setUint16(6, 32, true); // Bits per pixel
+                entryView.setUint32(8, imageBlock.length, true); // Data size
+                entryView.setUint32(12, dataOffset, true); // Data offset
+                
+                directoryEntries.push(entry);
+                imageDataArray.push(imageBlock);
+                
+                // 更新数据偏移量
+                dataOffset += imageBlock.length;
+            }
+            
+            // 合并所有部分
+            let offset = 0;
+            const icoData = new Uint8Array(
+                header.byteLength + 
+                directoryEntries.reduce((acc, entry) => acc + entry.byteLength, 0) +
+                imageDataArray.reduce((acc, img) => acc + img.length, 0)
+            );
+            
+            // 添加文件头
+            icoData.set(new Uint8Array(header), offset);
+            offset += header.byteLength;
+            
+            // 添加目录项
+            directoryEntries.forEach(entry => {
+                icoData.set(new Uint8Array(entry), offset);
+                offset += entry.byteLength;
+            });
+            
+            // 添加图像数据
+            imageDataArray.forEach(img => {
+                icoData.set(img, offset);
+                offset += img.length;
+            });
+            
+            // 创建并返回Blob
+            return new Blob([icoData], { type: 'image/x-icon' });
+        }
+        
+        // 下载Blob
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+        
+        // 下载为ZIP包
+        async function downloadAsZip() {
+            if (generatedIcons.length === 0) {
+                showNotification('没有可下载的图标文件', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const zip = new JSZip();
+                
+                // 添加所有图标到ZIP
+                generatedIcons.forEach(icon => {
+                    zip.file(icon.filename, icon.blob);
+                });
+                
+                // 生成ZIP文件
+                const zipBlob = await zip.generateAsync({type:"blob"});
+                
+                // 下载ZIP
+                saveAs(zipBlob, `${uploadedFileName}_icons.zip`);
+                
+                showLoading(false);
+                showNotification('ZIP包下载成功！');
+                
+                // 隐藏下载选项
+                document.getElementById('download-options').style.display = 'none';
+                document.getElementById('download-info').style.display = 'none';
+                
+            } catch (error) {
+                console.error('创建ZIP时出错:', error);
+                showLoading(false);
+                showNotification(`创建ZIP时出错: ${error.message}`, 'error');
+            }
+        }
+        
+        // 下载所有单独图标
+        function downloadAllIcons() {
+            if (generatedIcons.length === 0) {
+                showNotification('没有可下载的图标文件', 'error');
+                return;
+            }
+            
+            // 逐个下载图标
+            generatedIcons.forEach(icon => {
+                downloadBlob(icon.blob, icon.filename);
+            });
+            
+            showNotification(`已开始下载${generatedIcons.length}个ICO文件`);
+            
+            // 隐藏下载选项
+            document.getElementById('download-options').style.display = 'none';
+            document.getElementById('download-info').style.display = 'none';
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            initResolutionGrid();
+            initEventListeners();
+            updateSelectedResolutions(); // 初始化分辨率计数
+            
+            // 显示欢迎消息
+            setTimeout(() => {
+                showNotification('欢迎使用ICO图标生成器！请上传PNG图片开始');
+            }, 1000);
+        });
+    </script>
+</body>
 </html>
